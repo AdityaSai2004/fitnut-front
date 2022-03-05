@@ -43,8 +43,8 @@ async function setup() {
   createCanvas(windowWidth-windowWidth/10, windowHeight-windowWidth/10);
   video = createCapture(VIDEO, videoReady);
   video.size(width,height);
+  pixelDensity(1)
   video.hide()
-
   await init();
 }
 function windowResized() {
