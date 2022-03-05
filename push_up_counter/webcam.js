@@ -12,56 +12,60 @@ let downPosition = false;
 let highlightBack = false;
 let backWarningGiven = false;
 
+
 async function init() {
-  detectorConfig = {
-    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-  };
-  detector = await poseDetection.createDetector(
-    poseDetection.SupportedModels.MoveNet,
-    detectorConfig
-  );
+  detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER };
+  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
   edges = {
-    "5,7": "m",
-    "7,9": "m",
-    "6,8": "c",
-    "8,10": "c",
-    "5,6": "y",
-    "5,11": "m",
-    "6,12": "c",
-    "11,12": "y",
-    "11,13": "m",
-    "13,15": "m",
-    "12,14": "c",
-    "14,16": "c",
+    '5,7': 'm',
+    '7,9': 'm',
+    '6,8': 'c',
+    '8,10': 'c',
+    '5,6': 'y',
+    '5,11': 'm',
+    '6,12': 'c',
+    '11,12': 'y',
+    '11,13': 'm',
+    '13,15': 'm',
+    '12,14': 'c',
+    '14,16': 'c'
   };
   await getPoses();
 }
 
 async function videoReady() {
-  //console.log('video ready');
+  console.log('video ready');
 }
 
 async function setup() {
-  var msg = new SpeechSynthesisUtterance("Loading, please wait...");
+  var msg = new SpeechSynthesisUtterance('Loading, please wait...');
   window.speechSynthesis.speak(msg);
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth-windowWidth/10, windowHeight-windowWidth/10);
   video = createCapture(VIDEO, videoReady);
-  video.size(windowWidth, windowHeight);
-  await init();
-  video.hide();
-}
+  video.size(width,height);
+  video.hide()
 
+  await init();
+}
+function windowResized() {
+  resizeCanvas(windowWidth-windowWidth/10, windowHeight-windowWidth/10);
+  draw()
+}
 async function getPoses() {
-  poses = await detector.estimatePoses(video.elt);
-  setTimeout(getPoses, 0);
+  if(detector){
+    poses = await detector.estimatePoses(video.elt);
+  
+  }
+       
   //console.log(poses);
+  requestAnimationFrame(getPoses);
 }
 
 function draw() {
   background(220);
   translate(width, 0);
   scale(-1, 1);
-  image(video, 0, 0, video.width, video.height);
+  image(video,0, 0,video.width, video.height);
 
   // Draw keypoints and skeleton
   drawKeypoints();
@@ -80,10 +84,13 @@ function draw() {
   if (poses && poses.length > 0) {
     let pushupString = `Push-ups completed: ${reps}`;
     text(pushupString, 100, 90);
-  } else {
-    text("Loading, please wait...", 100, 90);
   }
+  else {
+    text('Loading, please wait...', 100, 90);
+  }
+  
 }
+
 
 function drawKeypoints() {
   var count = 0;
@@ -99,7 +106,8 @@ function drawKeypoints() {
       }
       if (count == 17) {
         //console.log('Whole body visible!');
-      } else {
+      }
+      else {
         //console.log('Not fully visible!');
       }
       updateArmAngle();
@@ -115,6 +123,7 @@ function drawSkeleton() {
   confidence_threshold = 0.5;
 
   if (poses && poses.length > 0) {
+    console.log("ohayao onichan")
     for (const [key, value] of Object.entries(edges)) {
       const p = key.split(",");
       const p1 = p[0];
@@ -127,17 +136,15 @@ function drawSkeleton() {
       const x2 = poses[0].keypoints[p2].x;
       const c2 = poses[0].keypoints[p2].score;
 
-      if (c1 > confidence_threshold && c2 > confidence_threshold) {
-        if (
-          highlightBack == true &&
-          (p[1] == 11 || (p[0] == 6 && p[1] == 12) || p[1] == 13 || p[0] == 12)
-        ) {
+      if ((c1 > confidence_threshold) && (c2 > confidence_threshold)) {
+        if ((highlightBack == true) && ((p[1] == 11) || ((p[0] == 6) && (p[1] == 12)) || (p[1] == 13) || (p[0] == 12))) {
           strokeWeight(3);
           stroke(255, 0, 0);
           line(x1, y1, x2, y2);
-        } else {
+        }
+        else {
           strokeWeight(2);
-          stroke("rgb(0, 255, 0)");
+          stroke('rgb(0, 255, 0)');
           line(x1, y1, x2, y2);
         }
       }
@@ -155,58 +162,72 @@ function updateArmAngle() {
   leftShoulder = poses[0].keypoints[5];
   leftElbow = poses[0].keypoints[7];
 
-  angle =
-    (Math.atan2(leftWrist.y - leftElbow.y, leftWrist.x - leftElbow.x) -
-      Math.atan2(leftShoulder.y - leftElbow.y, leftShoulder.x - leftElbow.x)) *
-    (180 / Math.PI);
+
+
+  angle = (
+    Math.atan2(
+      leftWrist.y - leftElbow.y,
+      leftWrist.x - leftElbow.x
+    ) - Math.atan2(
+      leftShoulder.y - leftElbow.y,
+      leftShoulder.x - leftElbow.x
+    )
+  ) * (180 / Math.PI);
 
   if (angle < 0) {
     //angle = angle + 360;
   }
 
-  if (
-    leftWrist.score > 0.3 &&
-    leftElbow.score > 0.3 &&
-    leftShoulder.score > 0.3
-  ) {
+  if (leftWrist.score > 0.3 && leftElbow.score > 0.3 && leftShoulder.score > 0.3) {
     //console.log(angle);
     elbowAngle = angle;
-  } else {
+  }
+  else {
     //console.log('Cannot see elbow');
   }
+
 }
 
 function updateBackAngle() {
+
   var leftShoulder = poses[0].keypoints[5];
   var leftHip = poses[0].keypoints[11];
   var leftKnee = poses[0].keypoints[13];
 
-  angle =
-    (Math.atan2(leftKnee.y - leftHip.y, leftKnee.x - leftHip.x) -
-      Math.atan2(leftShoulder.y - leftHip.y, leftShoulder.x - leftHip.x)) *
-    (180 / Math.PI);
+  angle = (
+    Math.atan2(
+      leftKnee.y - leftHip.y,
+      leftKnee.x - leftHip.x
+    ) - Math.atan2(
+      leftShoulder.y - leftHip.y,
+      leftShoulder.x - leftHip.x
+    )
+  ) * (180 / Math.PI);
   angle = angle % 180;
   if (leftKnee.score > 0.3 && leftHip.score > 0.3 && leftShoulder.score > 0.3) {
+
     backAngle = angle;
   }
 
-  if (backAngle < 20 || backAngle > 160) {
+  if ((backAngle < 20) || (backAngle > 160)) {
     highlightBack = false;
-  } else {
+  }
+  else {
     highlightBack = true;
     if (backWarningGiven != true) {
-      var msg = new SpeechSynthesisUtterance("Keep your back straight");
+      var msg = new SpeechSynthesisUtterance('Keep your back straight');
       window.speechSynthesis.speak(msg);
       backWarningGiven = true;
     }
   }
+
 }
 
 function inUpPosition() {
   if (elbowAngle > 170 && elbowAngle < 200) {
     //console.log('In up position')
     if (downPosition == true) {
-      var msg = new SpeechSynthesisUtterance(str(reps + 1));
+      var msg = new SpeechSynthesisUtterance(str(reps+1));
       window.speechSynthesis.speak(msg);
       reps = reps + 1;
     }
@@ -219,22 +240,19 @@ function inDownPosition() {
   var elbowAboveNose = false;
   if (poses[0].keypoints[0].y > poses[0].keypoints[7].y) {
     elbowAboveNose = true;
-  } else {
+  }
+  else {
     //console.log('Elbow is not above nose')
   }
 
-  if (
-    highlightBack == false &&
-    elbowAboveNose &&
-    abs(elbowAngle) > 70 &&
-    abs(elbowAngle) < 100
-  ) {
+  if ((highlightBack == false) && elbowAboveNose && ((abs(elbowAngle) > 70) && (abs(elbowAngle) < 100))) {
     //console.log('In down position')
     if (upPosition == true) {
-      var msg = new SpeechSynthesisUtterance("Up");
+      var msg = new SpeechSynthesisUtterance('Up');
       window.speechSynthesis.speak(msg);
     }
     downPosition = true;
     upPosition = false;
   }
 }
+
